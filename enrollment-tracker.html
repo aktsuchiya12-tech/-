@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>誘導トラッカー</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="誘導トラッカー" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: #F7F8FC;
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    input, textarea { font-family: inherit; }
+    .screen { display: flex; flex-direction: column; min-height: 100vh; }
+    .header {
+      padding: 16px 16px 12px;
+      display: flex; flex-direction: column; gap: 2px;
+      border-bottom: 1px solid #E4E6F0;
+      background: #fff;
+    }
+    .header-title { font-weight: 700; font-size: 16px; color: #1C1E2E; }
+    .back-btn {
+      background: none; border: none; color: #5A67F2;
+      font-size: 14px; padding: 0; margin-bottom: 4px; text-align: left;
+    }
+    .scroll-area { padding: 12px 16px; flex: 1; overflow-y: auto; }
+    .card {
+      margin: 16px; background: #fff; border-radius: 16px;
+      padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .course-card {
+      background: #fff; border-radius: 14px; padding: 16px;
+      margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .input-field {
+      border: 1px solid #E4E6F0; border-radius: 8px;
+      padding: 8px 10px; font-size: 14px; color: #1C1E2E;
+      outline: none; background: #F7F8FC; width: 100%;
+    }
+    .label { display: block; font-size: 12px; color: #6B7192; margin-bottom: 6px; font-weight: 600; }
+    .btn-primary {
+      background: #5A67F2; color: #fff; border: none;
+      border-radius: 12px; padding: 14px 20px;
+      font-size: 15px; font-weight: 700; width: 100%;
+    }
+    .btn-secondary {
+      background: #fff; color: #5A67F2;
+      border: 1.5px solid #5A67F2; border-radius: 12px;
+      padding: 12px 16px; font-size: 14px; font-weight: 600;
+    }
+    .btn-add {
+      background: #EEF0FD; color: #5A67F2; border: none;
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 13px; font-weight: 700;
+    }
+    .btn-add-row {
+      background: none; border: 1.5px dashed #E4E6F0;
+      border-radius: 8px; padding: 10px; font-size: 13px;
+      color: #6B7192; width: 100%; margin-top: 4px;
+    }
+    .btn-remove { background: none; border: none; color: #EF4444; font-size: 16px; padding: 0 4px; }
+    .btn-count {
+      background: #EEF0FD; border: none; color: #5A67F2;
+      border-radius: 8px; width: 36px; height: 36px;
+      font-size: 20px; font-weight: 700;
+    }
+    .btn-nav {
+      background: none; border: 1px solid #E4E6F0;
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 13px; color: #6B7192;
+    }
+    .btn-nav:disabled { opacity: 0.3; }
+    .tab-btn {
+      flex: 1; border: none; padding: 8px;
+      border-radius: 8px; font-size: 14px;
+      transition: all 0.2s; font-family: inherit;
+    }
+    .tab-btn.active { background: #5A67F2; color: #fff; font-weight: 700; }
+    .tab-btn:not(.active) { background: transparent; color: #6B7192; }
+    .badge {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 20px;
+    }
+    .badge-current { background: #EEF0FD; color: #5A67F2; }
+    .badge-future { background: #F0FDF4; color: #22C55E; }
+    .progress-bar-bg {
+      height: 6px; background: #E4E6F0;
+      border-radius: 3px; margin-bottom: 10px; overflow: hidden;
+    }
+    .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+    .memo-box {
+      background: #FFFBEB; border: 1px solid #FDE68A;
+      border-radius: 8px; padding: 8px 10px;
+      font-size: 12px; color: #92400E;
+      margin-bottom: 10px; line-height: 1.6;
+    }
+    .maybe-box {
+      background: #F5F3FF; border: 1px solid #DDD6FE;
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
+    }
+    .maybe-banner {
+      margin: 0 16px 8px;
+      background: #F5F3FF; border: 1px solid #DDD6FE;
+      border-radius: 10px; padding: 10px 14px;
+      display: flex; align-items: center; gap: 8px;
+      text-align: left; width: calc(100% - 32px);
+      border: 1px solid #DDD6FE;
+    }
+    .log-entry {
+      font-size: 11px; color: #6B7192;
+      display: flex; gap: 6px; margin-bottom: 2px;
+    }
+    .log-entry .count { color: #5A67F2; font-weight: 600; }
+    .empty-state { text-align: center; padding: 60px 20px; }
+    .row { display: flex; align-items: center; gap: 8px; }
+    .row-between { display: flex; justify-content: space-between; align-items: center; }
+    .bottom-actions { padding: 12px 16px 24px; display: flex; gap: 8px; }
+    .hint { font-size: 12px; color: #6B7192; margin-bottom: 12px; }
+    .setup-row {
+      background: #fff; border-radius: 12px; padding: 14px;
+      margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .maybe-border-left { border-left: 3px solid #8B5CF6; }
+    .no-border-left { border-left: 3px solid transparent; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const ROOMS = { A: "松戸", B: "流山" };
+const STORAGE_KEY = "enrollment_tracker_v4";
+
+// ── Utilities ────────────────────────────────────────────────────────────
+function getCycleKey(date = new Date()) {
+  const year = date.getFullYear(), month = date.getMonth(), day = date.getDate();
+  if (day >= 25) return `${year}-${String(month + 1).padStart(2, "0")}`;
+  const pm = month === 0 ? 12 : month;
+  const py = month === 0 ? year - 1 : year;
+  return `${py}-${String(pm).padStart(2, "0")}`;
+}
+function nextCycleKey(key) {
+  const [y, m] = key.split("-").map(Number);
+  const nm = m === 12 ? 1 : m + 1, ny = m === 12 ? y + 1 : y;
+  return `${ny}-${String(nm).padStart(2, "0")}`;
+}
+function prevCycleKey(key) {
+  const [y, m] = key.split("-").map(Number);
+  const pm = m === 1 ? 12 : m - 1, py = m === 1 ? y - 1 : y;
+  return `${py}-${String(pm).padStart(2, "0")}`;
+}
+function addMonths(key, n) { let k = key; for (let i = 0; i < n; i++) k = nextCycleKey(k); return k; }
+function cycleLabel(key) {
+  const [y, m] = key.split("-");
+  const endM = parseInt(m) === 12 ? 1 : parseInt(m) + 1;
+  const endY = parseInt(m) === 12 ? parseInt(y) + 1 : parseInt(y);
+  return `${y}年${m}月25日〜${endY}年${String(endM).padStart(2,"0")}月24日`;
+}
+function pct(enrolled, target) { return (!target) ? 0 : Math.round((enrolled / target) * 100); }
+function barColor(p) {
+  if (p >= 100) return "#22C55E";
+  if (p >= 60) return "#5A67F2";
+  if (p >= 30) return "#F59E0B";
+  return "#EF4444";
+}
+function uid() { return Math.random().toString(36).slice(2, 8); }
+
+// ── Storage ───────────────────────────────────────────────────────────────
+function loadData() {
+  try { const r = localStorage.getItem(STORAGE_KEY); return r ? JSON.parse(r) : { cycles: {}, maybeMemo: "" }; }
+  catch { return { cycles: {}, maybeMemo: "" }; }
+}
+function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+
+// ── State ─────────────────────────────────────────────────────────────────
+const today = new Date();
+const state = {
+  currentCycleKey: getCycleKey(today),
+  cycleKey: getCycleKey(today),
+  data: loadData(),
+  view: "home",       // home | courseSetup | roomSetup | add | maybe
+  activeRoom: "A",
+  addCourseId: null,
+  expandedMemo: null,
+  expandedSetupIdx: null,
+  draft: [],
+  targets: {},
+  addCount: 1,
+  addNote: "",
+  maybeText: "",
+};
+
+function maxCycleKey() { return addMonths(state.currentCycleKey, 3); }
+function isCurrentCycle() { return state.cycleKey === state.currentCycleKey; }
+function isFutureCycle() { return state.cycleKey > state.currentCycleKey; }
+function isMaxCycle() { return state.cycleKey === maxCycleKey(); }
+
+function getCycle() { return state.data.cycles[state.cycleKey] || { courses: [], rooms: { A: {}, B: {} } }; }
+function getCourses() { return getCycle().courses || []; }
+function getCourseRoom(courseId, roomId) {
+  return getCycle().rooms?.[roomId]?.[courseId] || { target: 0, enrolled: 0, log: [] };
+}
+function updateCycle(updater) {
+  const cycle = state.data.cycles[state.cycleKey] || { courses: [], rooms: { A: {}, B: {} } };
+  state.data.cycles[state.cycleKey] = updater(cycle);
+  saveData(state.data);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById("app");
+  if (state.view === "home") app.innerHTML = renderHome();
+  else if (state.view === "courseSetup") app.innerHTML = renderCourseSetup();
+  else if (state.view === "roomSetup") app.innerHTML = renderRoomSetup();
+  else if (state.view === "add") app.innerHTML = renderAdd();
+  else if (state.view === "maybe") app.innerHTML = renderMaybe();
+  attachEvents();
+}
+
+// ── Home ──────────────────────────────────────────────────────────────────
+function renderHome() {
+  const courses = getCourses().filter(c => !c.maybe);
+  const maybeCourses = getCourses().filter(c => c.maybe);
+  const hasMaybe = maybeCourses.length > 0 || state.data.maybeMemo;
+
+  let cards = "";
+  if (courses.length === 0) {
+    cards = `<div class="empty-state">
+      <div style="font-size:32px;margin-bottom:8px">📋</div>
+      <div style="color:#6B7192;font-size:14px;margin-bottom:16px">まだ講座が設定されていません</div>
+      <button class="btn-primary" onclick="goTo('courseSetup')">講座を設定する</button>
+    </div>`;
+  } else {
+    courses.forEach((course, i) => {
+      const rd = getCourseRoom(course.id, state.activeRoom);
+      const p = pct(rd.enrolled, rd.target);
+      const color = barColor(p);
+      const memoOpen = state.expandedMemo === i;
+      const logHtml = rd.log && rd.log.length > 0
+        ? `<div style="margin-top:10px;border-top:1px solid #E4E6F0;padding-top:8px">
+            ${[...rd.log].slice(-3).reverse().map(e =>
+              `<div class="log-entry"><span>${e.date}</span><span class="count">+${e.count}名</span>${e.note ? `<span>${e.note}</span>` : ""}</div>`
+            ).join("")}
+          </div>` : "";
+      const memoBtn = course.memo
+        ? `<button style="background:none;border:none;color:#F59E0B;font-size:11px;cursor:pointer;padding:2px 0 0;display:flex;align-items:center;gap:3px" onclick="toggleMemo(${i})">📝 メモ ${memoOpen ? "▲" : "▼"}</button>` : "";
+      const memoContent = memoOpen && course.memo
+        ? `<div class="memo-box">${course.memo}</div>` : "";
+      const addBtn = !isFutureCycle()
+        ? `<button class="btn-add" onclick="startAdd('${course.id}')">＋ 記録</button>` : "";
+
+      cards += `<div class="course-card">
+        <div class="row-between" style="margin-bottom:8px">
+          <div style="flex:1;margin-right:8px">
+            <div style="font-weight:700;font-size:15px;color:#1C1E2E">${course.name}</div>
+            ${memoBtn}
+          </div>
+          <span style="font-size:22px;font-weight:800;color:${color}">${p}%</span>
+        </div>
+        ${memoContent}
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.min(p,100)}%;background:${color}"></div></div>
+        <div class="row-between">
+          <div style="font-size:13px;color:#6B7192">
+            <span style="color:#1C1E2E;font-weight:600">${rd.enrolled}</span> / ${rd.target}名
+            ${rd.target > 0 && rd.enrolled < rd.target ? `<span style="color:#F59E0B;margin-left:6px">あと${rd.target - rd.enrolled}名</span>` : ""}
+          </div>
+          ${addBtn}
+        </div>
+        ${logHtml}
+      </div>`;
+    });
+  }
+
+  const maybeBanner = hasMaybe
+    ? `<button class="maybe-banner" onclick="goTo('maybe')">
+        <span style="font-size:18px">🔮</span>
+        <div style="flex:1">
+          <div style="font-weight:700;color:#8B5CF6;font-size:13px">開講するかも？</div>
+          ${maybeCourses.length > 0 ? `<div style="font-size:11px;color:#6B7192;margin-top:1px">${maybeCourses.map(c=>c.name).join("、")}</div>` : ""}
+        </div>
+        <span style="color:#8B5CF6;font-size:12px">›</span>
+      </button>` : "";
+
+  const tabs = Object.entries(ROOMS).map(([id, name]) =>
+    `<button class="tab-btn ${state.activeRoom === id ? "active" : ""}" onclick="setRoom('${id}')">${name}</button>`
+  ).join("");
+
+  return `<div class="screen">
+    <div style="padding:20px 16px 0;display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="font-size:11px;color:#6B7192;letter-spacing:0.08em;margin-bottom:2px">誘導トラッカー</div>
+        <div style="font-size:13px;color:#1C1E2E;font-weight:600">${cycleLabel(state.cycleKey)}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        ${isCurrentCycle() ? `<span class="badge badge-current">今月</span>` : ""}
+        ${isFutureCycle() ? `<span class="badge badge-future">先月以降</span>` : ""}
+      </div>
+    </div>
+    <div style="display:flex;padding:10px 16px;gap:8px">
+      <button class="btn-nav" onclick="prevCycle()">‹ 前月</button>
+      <div style="flex:1"></div>
+      <button class="btn-nav" onclick="nextCycle()" ${isMaxCycle() ? "disabled" : ""}>次月 ›</button>
+    </div>
+    ${maybeBanner}
+    <div style="display:flex;gap:6px;padding:0 16px 12px">${tabs}</div>
+    <div style="padding:0 16px;flex:1;overflow-y:auto">${cards}</div>
+    <div class="bottom-actions">
+      <button class="btn-secondary" style="flex:1" onclick="goTo('courseSetup')">✏️ 講座を編集</button>
+      <button class="btn-secondary" style="color:#8B5CF6;border-color:#8B5CF6" onclick="goTo('maybe')">🔮</button>
+    </div>
+  </div>`;
+}
+
+// ── Course Setup ──────────────────────────────────────────────────────────
+function renderCourseSetup() {
+  const rows = state.draft.map((row, i) => {
+    const memoOpen = state.expandedSetupIdx === i;
+    return `<div class="setup-row ${row.maybe ? "maybe-border-left" : "no-border-left"}">
+      <div class="row" style="margin-bottom:8px">
+        <input class="input-field" style="flex:1" placeholder="講座名 ${i+1}" value="${escHtml(row.name)}" oninput="updateDraft(${i},'name',this.value)" />
+        <button class="btn-remove" onclick="removeDraftRow(${i})">✕</button>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <button style="background:none;border:none;color:${memoOpen ? "#F59E0B" : "#6B7192"};font-size:12px;cursor:pointer;padding:0;display:flex;align-items:center;gap:3px" onclick="toggleSetupMemo(${i})">
+          ${row.memo ? "📝 メモあり" : "＋ メモ"} ${memoOpen ? "▲" : "▼"}
+        </button>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#8B5CF6;cursor:pointer">
+          <input type="checkbox" ${row.maybe ? "checked" : ""} onchange="updateDraft(${i},'maybe',this.checked)" style="accent-color:#8B5CF6" />
+          開講するかも？
+        </label>
+      </div>
+      ${memoOpen ? `<textarea class="input-field" style="margin-top:8px;min-height:64px;resize:vertical;line-height:1.6" placeholder="例：3ヶ月誘導期間、入会金半額対象" oninput="updateDraft(${i},'memo',this.value)">${escHtml(row.memo)}</textarea>` : ""}
+    </div>`;
+  }).join("");
+
+  return `<div class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('home')">← 戻る</button>
+      <span class="header-title">講座設定（共通）</span>
+      <span style="color:#6B7192;font-size:12px">${cycleLabel(state.cycleKey)}</span>
+    </div>
+    <div class="scroll-area">
+      <div class="hint">全教室共通の講座を登録します。目標人数は次の画面で教室ごとに設定できます。</div>
+      ${rows}
+      <button class="btn-add-row" onclick="addDraftRow()">＋ 講座を追加</button>
+    </div>
+    <div style="padding:12px 16px 24px">
+      <button class="btn-primary" onclick="saveCourses()">保存して目標人数を設定 →</button>
+    </div>
+  </div>`;
+}
+
+// ── Room Setup ────────────────────────────────────────────────────────────
+function renderRoomSetup() {
+  const courses = getCourses().filter(c => !c.maybe);
+  if (courses.length === 0) {
+    return `<div class="screen">
+      <div class="header">
+        <button class="back-btn" onclick="goTo('courseSetup')">← 戻る</button>
+        <span class="header-title">目標人数設定</span>
+      </div>
+      <div style="color:#6B7192;text-align:center;padding:40px">講座が登録されていません</div>
+    </div>`;
+  }
+  const rows = courses.map(c => {
+    const inputs = Object.entries(ROOMS).map(([r, name]) =>
+      `<div style="flex:1">
+        <label class="label">${name}</label>
+        <input class="input-field" type="number" min="0" placeholder="0" style="text-align:center" value="${state.targets[r]?.[c.id] ?? ""}" oninput="updateTarget('${r}','${c.id}',this.value)" />
+      </div>`
+    ).join("");
+    return `<div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05)">
+      <div style="font-weight:700;color:#1C1E2E;margin-bottom:10px">${c.name}</div>
+      <div style="display:flex;gap:10px">${inputs}</div>
+    </div>`;
+  }).join("");
+
+  return `<div class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('courseSetup')">← 戻る</button>
+      <span class="header-title">目標人数設定</span>
+      <span style="color:#6B7192;font-size:12px">${cycleLabel(state.cycleKey)}</span>
+    </div>
+    <div class="scroll-area">${rows}</div>
+    <div style="padding:12px 16px 24px">
+      <button class="btn-primary" onclick="saveTargets()">保存する</button>
+    </div>
+  </div>`;
+}
+
+// ── Add enrollment ────────────────────────────────────────────────────────
+function renderAdd() {
+  const course = getCourses().find(c => c.id === state.addCourseId);
+  if (!course) return "";
+  return `<div class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('home')">← 戻る</button>
+      <span class="header-title">進級を記録</span>
+      <span style="color:#6B7192;font-size:12px">${ROOMS[state.activeRoom]}</span>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;font-size:18px;color:#1C1E2E;margin-bottom:${course.memo ? "10px" : "16px"}">${course.name}</div>
+      ${course.memo ? `<div class="memo-box" style="margin-bottom:16px">📝 ${course.memo}</div>` : ""}
+      <label class="label">人数</label>
+      <div class="row" style="gap:12px;margin-bottom:16px">
+        <button class="btn-count" onclick="changeCount(-1)">－</button>
+        <span id="count-display" style="font-size:28px;font-weight:700;color:#5A67F2;min-width:40px;text-align:center">${state.addCount}</span>
+        <button class="btn-count" onclick="changeCount(1)">＋</button>
+      </div>
+      <label class="label">メモ（任意）</label>
+      <input class="input-field" placeholder="例：ご夫婦で申し込み" value="${escHtml(state.addNote)}" oninput="state.addNote=this.value" />
+    </div>
+    <div style="padding:0 16px 24px">
+      <button class="btn-primary" onclick="submitAdd()">記録する</button>
+    </div>
+  </div>`;
+}
+
+// ── Maybe screen ──────────────────────────────────────────────────────────
+function renderMaybe() {
+  const maybeCourses = getCourses().filter(c => c.maybe);
+  const courseList = maybeCourses.map(c =>
+    `<div class="maybe-box">
+      <div style="font-weight:700;color:#8B5CF6;font-size:14px">🔮 ${c.name}</div>
+      ${c.memo ? `<div style="font-size:12px;color:#6B7192;margin-top:4px">${c.memo}</div>` : ""}
+    </div>`
+  ).join("");
+
+  return `<div class="screen">
+    <div class="header">
+      <button class="back-btn" onclick="goTo('home')">← 戻る</button>
+      <span class="header-title">開講するかも？メモ</span>
+    </div>
+    <div class="scroll-area">
+      ${maybeCourses.length > 0 ? `<div style="margin-bottom:16px"><div class="label" style="margin-bottom:8px">今月「開講するかも？」の講座</div>${courseList}</div>` : ""}
+      <div class="label" style="margin-bottom:8px">全体メモ</div>
+      <textarea class="input-field" style="min-height:160px;resize:vertical;line-height:1.8;font-size:14px" placeholder="例：&#10;・〇〇講座：本部から8月開講予定と連絡あり&#10;・△△講座：検討中、詳細未定" oninput="state.maybeText=this.value">${escHtml(state.maybeText)}</textarea>
+    </div>
+    <div style="padding:12px 16px 24px">
+      <button class="btn-primary" onclick="saveMaybe()">保存する</button>
+    </div>
+  </div>`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function attachEvents() {}
+
+// ── Actions ───────────────────────────────────────────────────────────────
+function goTo(view) {
+  state.expandedMemo = null;
+  state.expandedSetupIdx = null;
+  if (view === "courseSetup") {
+    const courses = getCourses();
+    state.draft = courses.length > 0
+      ? courses.map(c => ({ id: c.id, name: c.name, memo: c.memo || "", maybe: c.maybe || false }))
+      : [{ id: uid(), name: "", memo: "", maybe: false }];
+  }
+  if (view === "roomSetup") {
+    const courses = getCourses().filter(c => !c.maybe);
+    state.targets = {};
+    Object.keys(ROOMS).forEach(r => {
+      state.targets[r] = {};
+      courses.forEach(c => { state.targets[r][c.id] = String(getCourseRoom(c.id, r).target || ""); });
+    });
+  }
+  if (view === "maybe") {
+    state.maybeText = state.data.maybeMemo || "";
+  }
+  state.view = view;
+  render();
+}
+
+function setRoom(id) { state.activeRoom = id; state.expandedMemo = null; render(); }
+function prevCycle() { state.cycleKey = prevCycleKey(state.cycleKey); state.expandedMemo = null; render(); }
+function nextCycle() { if (!isMaxCycle()) { state.cycleKey = nextCycleKey(state.cycleKey); state.expandedMemo = null; render(); } }
+function toggleMemo(i) { state.expandedMemo = state.expandedMemo === i ? null : i; render(); }
+function toggleSetupMemo(i) { state.expandedSetupIdx = state.expandedSetupIdx === i ? null : i; render(); }
+
+function addDraftRow() { state.draft.push({ id: uid(), name: "", memo: "", maybe: false }); render(); }
+function removeDraftRow(i) {
+  state.draft.splice(i, 1);
+  if (state.expandedSetupIdx === i) state.expandedSetupIdx = null;
+  render();
+}
+function updateDraft(i, field, val) { state.draft[i][field] = val; }
+function updateTarget(r, cid, val) {
+  if (!state.targets[r]) state.targets[r] = {};
+  state.targets[r][cid] = val;
+}
+
+function saveCourses() {
+  const valid = state.draft.filter(r => r.name.trim());
+  const newCourses = valid.map(r => ({ id: r.id, name: r.name.trim(), memo: r.memo.trim(), maybe: r.maybe }));
+  updateCycle(cycle => ({ ...cycle, courses: newCourses }));
+  goTo("roomSetup");
+}
+
+function saveTargets() {
+  const courses = getCourses().filter(c => !c.maybe);
+  updateCycle(cycle => {
+    const rooms = { A: { ...(cycle.rooms?.A || {}) }, B: { ...(cycle.rooms?.B || {}) } };
+    Object.keys(ROOMS).forEach(r => {
+      courses.forEach(c => {
+        const existing = cycle.rooms?.[r]?.[c.id] || { enrolled: 0, log: [] };
+        rooms[r][c.id] = { ...existing, target: parseInt(state.targets[r]?.[c.id]) || 0 };
+      });
+    });
+    return { ...cycle, rooms };
+  });
+  goTo("home");
+}
+
+function startAdd(courseId) {
+  state.addCourseId = courseId;
+  state.addCount = 1;
+  state.addNote = "";
+  goTo("add");
+}
+
+function changeCount(delta) {
+  state.addCount = Math.max(1, state.addCount + delta);
+  const el = document.getElementById("count-display");
+  if (el) el.textContent = state.addCount;
+}
+
+function submitAdd() {
+  const entry = { date: new Date().toLocaleDateString("ja-JP"), count: state.addCount, note: state.addNote.trim() };
+  const cid = state.addCourseId, r = state.activeRoom;
+  updateCycle(cycle => {
+    const rc = cycle.rooms?.[r]?.[cid] || { target: 0, enrolled: 0, log: [] };
+    return {
+      ...cycle,
+      rooms: {
+        ...cycle.rooms,
+        [r]: { ...(cycle.rooms?.[r] || {}), [cid]: { ...rc, enrolled: rc.enrolled + state.addCount, log: [...rc.log, entry] } }
+      }
+    };
+  });
+  goTo("home");
+}
+
+function saveMaybe() {
+  state.data.maybeMemo = state.maybeText.trim();
+  saveData(state.data);
+  goTo("home");
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
